@@ -1,0 +1,222 @@
+---
+title: "week6"
+format: html
+editor: visual
+---
+
+## `Browser()`
+
+```{r}
+library(tidyverse)
+library(palmerpenguins)
+
+traits_r2 <- function(trait1, trait2) {
+  #browser()  #Put browser here!! 
+  summary(lm(trait1 ~ trait2))$r.squared
+}
+
+penguins %>% 
+  summarize(flipper_bill_r2 = traits_r2(flipper_length_mm, bill_length_mm))
+```
+
+**Q1:** How would you describe the error? I\'m not asking you describe the *cause* of the error yet. Describe how the output is different than what you would expect.
+
+*I am expecting a tibble with content (i.e. a column), but there are no columns.*
+
+**Q2:** Where would you add `browser()` to explore the cause of the error?
+
+*Put it before the line "summary(lm(trait1 \~ trait2))\$rsquared" in the function.*
+
+**Q3:** Does the body of `traits_r2` use list or atomic vector indexing? Does it use indexing by position, logic, or name?
+
+*It uses list indexing (named list).*
+
+**Q4:** What\'s the cause of the error? How would you fix it?
+
+*The error is a typo: "rsquared" should be "r.squared".*
+
+## **Adding `group_by()`**
+
+```{r}
+# Pipeline 1
+penguins %>% 
+  group_by(species) %>% 
+  summarize(flipper_bill_r2 = traits_r2(flipper_length_mm, bill_length_mm))
+
+# Pipeline 2
+penguins %>% 
+  group_by(species, island) %>% 
+  summarize(flipper_bill_r2 = traits_r2(flipper_length_mm, bill_length_mm),
+            .groups = "drop")
+```
+
+**Q5:** How many times does Pipeline 1 call `traits_r2()`? How about Pipeline 2?
+
+Pipeline 1 calls `traits_r2()` 3 times (3 species). Pipeline 2 calls `traits_r2()` 5 times.
+
+**Q6:** Create Pipeline 3 that additionally groups by sex. How many times does Pipeline 3 call `traits_r2()`?
+
+```{r}
+# Pipeline 3
+penguins %>% 
+  group_by(species, island, sex) %>% 
+  summarize(flipper_bill_r2 = traits_r2(flipper_length_mm, bill_length_mm),
+            .groups = "drop") 
+```
+
+Pipeline 3 calls `traits_r2()` 13 times.
+
+## **Error in `group_by()`-`summarize()`**
+
+```{r}
+set.seed(12345)
+penguins2 <- penguins %>% 
+  drop_na(sex) %>% 
+  sample_n(25)
+penguins2[7, 3:6] <- NA
+
+
+traits_r2 <- function(trait1, trait2) {
+#  browser()  #Put browser here!! 
+  summary(lm(trait1 ~ trait2))$r.squared
+}
+
+penguins2 %>% 
+  drop_na() %>% 
+  group_by(species, island, sex) %>% 
+  summarize(flipper_bill_r2 = traits_r2(flipper_length_mm, bill_length_mm),
+            .groups = "drop") 
+```
+
+# **Visualizing data with `ggplot()`**
+
+```{r}
+library(palmerpenguins)
+library(tidyverse)
+
+ggplot(data = penguins, aes(x = body_mass_g, y = flipper_length_mm)) +
+  geom_point()
+```
+
+**Q10:** Change the aesthetics of the plot to show `bill_depth_mm` on the y-axis.
+
+```{r}
+ggplot(data = penguins, aes(x = body_mass_g, y = bill_depth_mm)) +
+  geom_point()
+```
+
+**Q11:** Add an aesthetic for color, so points will be color-coded by species.
+
+```{r}
+ggplot(data = penguins, 
+       aes(x = body_mass_g, y = bill_depth_mm,
+           color = species)) +
+  geom_point()
+```
+
+## **Customizing scales**
+
+```{r}
+ggplot(data = penguins) +
+  # You can also define aesthetics directly inside the geometries
+  geom_point(aes(x = body_mass_g, 
+                 y = flipper_length_mm,
+                 color = species)) +
+  # x aesthetic, continuous scale
+  scale_x_continuous(
+    # change the axis name
+    name = "Body mass (g)",
+    # change the limits
+    limits = c(2000, 8000)
+  ) +
+  # color aesthetic, manual scale
+  scale_color_manual(
+    # set the values for the colors
+    values = c(Adelie = "cornflowerblue",
+               Chinstrap = "firebrick",
+               Gentoo = "darkorchid")
+  )
+```
+
+**\
+Q12:** What function would you use to customize the y-axis? Use that function to expand the y-axis limits to include 150 and 250.
+
+```{r}
+ggplot(data = penguins) +
+  # You can also define aesthetics directly inside the geometries
+  geom_point(aes(x = body_mass_g, 
+                 y = flipper_length_mm,
+                 color = species)) +
+  # x aesthetic, continuous scale
+  scale_x_continuous(
+    # change the axis name
+    name = "Body mass (g)",
+    # change the limits
+    limits = c(2000, 8000)
+  ) +
+  # color aesthetic, manual scale
+  scale_color_manual(
+    # set the values for the colors
+    values = c(Adelie = "cornflowerblue",
+               Chinstrap = "firebrick",
+               Gentoo = "darkorchid")
+  )+
+  #This is the new section
+  scale_y_continuous(limits = c(150, 250))
+```
+
+**Q13:** Look up the help for `scale_color_brewer()`. Change the color scale to use the \"Dark2\" color palette.
+
+```{r}
+ggplot(data = penguins) +
+  # You can also define aesthetics directly inside the geometries
+  geom_point(aes(x = body_mass_g, 
+                 y = flipper_length_mm,
+                 color = species)) +
+  # x aesthetic, continuous scale
+  scale_x_continuous(
+    # change the axis name
+    name = "Body mass (g)",
+    # change the limits
+    limits = c(2000, 8000)
+  ) +
+  # This is the new section
+  scale_color_brewer(palette = "Dark2")
+```
+
+**Q14:** Use `geom_histogram()` to visualize the distribution of body masses.
+
+```{r}
+ggplot(penguins, aes(x=body_mass_g))+
+  geom_histogram()
+```
+
+**Q15:** Use `geom_boxplot()` to create boxplots of the flipper lengths by species. It should look like the figure below. Hint: what aesthetics will you use?
+
+```{r}
+ggplot(penguins, aes(x=species, y=flipper_length_mm))+
+  geom_boxplot()
+```
+
+**Q16:** `geom_pointrange()` is like `geom_point()` with the addition of error bars. Like `geom_point()`, `geom_pointrange()` takes `x` and `y` aesthetics, but it also takes `xmin`, `xmax`, `ymin` and `ymax` aesthetics. Create a figure that shows the mean ± sd of each penguin species\' body mass and flipper lengths using points and error bars; it should look like the figure below. First, create a summary data frame that calculates the mean and standard deviation of the two variables you need by each species. Then use that summary data frame to create your figure. Hint: `geom_pointrange()` takes `xmin` ***or*** `xmax`, same for `ymin` ***or*** `ymax`. So you\'ll need to call `geom_pointrange()` twice and specify the aesthetics within the geometry.
+
+```{r}
+plot_df <- penguins %>% 
+  drop_na() %>% 
+  group_by(species) %>% 
+  summarise(body_mass_mean = mean(body_mass_g),
+            body_mass_sd = sd(body_mass_g),
+            flipper_length_mean = mean(flipper_length_mm),
+            flipper_length_sd = sd(flipper_length_mm))
+
+ggplot(plot_df, aes(color = species))+
+  geom_pointrange(aes(
+    x = body_mass_mean, 
+    y = flipper_length_mean,
+    xmin = body_mass_mean-body_mass_sd,
+    xmax = body_mass_mean+body_mass_sd))+
+  geom_pointrange(aes(x = body_mass_mean, 
+    y = flipper_length_mean, 
+    ymin = flipper_length_mean-flipper_length_sd, 
+    ymax = flipper_length_mean+flipper_length_sd))
+```
